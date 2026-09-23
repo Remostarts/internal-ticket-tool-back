@@ -493,10 +493,10 @@ describe('the administrator seed on boot', () => {
     expect(admin?.email).toBe(env.SEED_ADMIN_EMAIL);
     expect(admin?.mustChangePassword).toBe(true);
     expect(admin?.profile?.fullName).toBe(env.SEED_ADMIN_NAME);
-    expect(await verifyPassword(env.SEED_ADMIN_PASSWORD, admin?.passwordHash)).toBe(true);
+    expect(await verifyPassword(env.SEED_ADMIN_PASSWORD!, admin?.passwordHash)).toBe(true);
 
     // The configured password really is the way in.
-    const signedIn = await signInAs(app, env.SEED_ADMIN_EMAIL, env.SEED_ADMIN_PASSWORD);
+    const signedIn = await signInAs(app, env.SEED_ADMIN_EMAIL!, env.SEED_ADMIN_PASSWORD!);
     expect(signedIn.body.user.role).toBe('admin');
     expect(signedIn.body.user.mustChangePassword).toBe(true);
     expect(signedIn.body.user.permissions).toHaveLength(ALL_PERMISSIONS.length);
