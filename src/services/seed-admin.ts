@@ -52,6 +52,11 @@ async function firstFreeUsername(base: string): Promise<string | null> {
 export async function seedAdmin(): Promise<SeedAdminResult> {
   const email = env.SEED_ADMIN_EMAIL;
 
+  if (!email || !env.SEED_ADMIN_PASSWORD || !env.SEED_ADMIN_NAME) {
+    logger.info('administrator seed skipped: missing SEED_ADMIN_* environment variables');
+    return { created: false, email: email ?? 'skipped', reason: 'already_exists' };
+  }
+
   if (databaseState() !== 'connected') {
     logger.warn({ email }, 'administrator seed skipped: the database is unavailable');
     return { created: false, email, reason: 'database_unavailable' };

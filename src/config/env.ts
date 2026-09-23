@@ -54,16 +54,15 @@ export const envSchema = z
       .string({ required_error: 'is required (the session cookie signing secret)' })
       .trim()
       .min(32, 'must be at least 32 characters long'),
-    SEED_ADMIN_EMAIL: z
-      .string({ required_error: 'is required (the seeded administrator email)' })
-      .trim()
-      .toLowerCase()
-      .min(1, 'is required')
-      .email('must be a valid email address'),
-    SEED_ADMIN_PASSWORD: z
-      .string({ required_error: 'is required (the seeded administrator password)' })
-      .min(8, 'must be at least 8 characters long'),
-    SEED_ADMIN_NAME: requiredText('the seeded administrator display name'),
+    SEED_ADMIN_EMAIL: z.preprocess(
+      blankToUndefined,
+      z.string().trim().toLowerCase().email('must be a valid email address').optional()
+    ),
+    SEED_ADMIN_PASSWORD: z.preprocess(
+      blankToUndefined,
+      z.string().min(8, 'must be at least 8 characters long').optional()
+    ),
+    SEED_ADMIN_NAME: optionalText,
 
     // Optional, with defaults.
     PORT: z.preprocess(
