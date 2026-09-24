@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createTaskSchema,
   moveTaskSchema,
+  updateTaskSchema,
 } from '@/shared';
 import { asyncHandler } from '../middleware/error-handler.js';
 import { requireAuth } from '../middleware/require-auth.js';
@@ -10,6 +11,7 @@ import {
   getProjectBoard,
   getTaskSubtasks,
   createTask,
+  updateTask,
   moveTask,
   deleteTask,
   getWatchtowerData,
@@ -77,6 +79,18 @@ export function createTasksRouter(): Router {
       const input = createTaskSchema.parse(req.body);
       const task = await createTask(req.sessionUser as any, input);
       res.status(201).json(task);
+    }),
+  );
+
+  // Update Task or Checklist
+  router.patch(
+    '/api/tasks/:id',
+    requireAuth,
+    requirePermission('tasks:write'),
+    asyncHandler(async (req, res) => {
+      const input = updateTaskSchema.parse(req.body);
+      const updated = await updateTask(req.sessionUser as any, req.params.id as string, input);
+      res.status(200).json(updated);
     }),
   );
 

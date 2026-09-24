@@ -51,8 +51,15 @@ export async function computeProjectProgress(user: ScopedUser, projectId: string
     const summary = {
       id: t._id.toString(),
       title: t.title,
+      description: t.description || '',
       priority: t.priority,
       column: t.column,
+      featureChecklist: t.featureChecklist || {
+        figma: false,
+        development: false,
+        testing: false,
+        deployed: false,
+      },
     };
 
     if (t.column === 'deployed') {

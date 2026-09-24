@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { Task } from '../models/task.js';
 import { assertProjectAccess, type ScopedUser } from './project-scope.js';
 import { writeAudit } from './audit.js';
-import type { CreateTaskInput, MoveTaskInput, TaskColumn } from '@/shared';
+import type { CreateTaskInput, MoveTaskInput, TaskColumn, UpdateTaskInput } from '@/shared';
 
 export interface TaskSummary {
   id: string;
@@ -27,6 +27,12 @@ export interface TaskSummary {
   acceptanceCriteria: Array<{ text: string; done: boolean }>;
   type: string | null;
   isPersonal?: boolean;
+  featureChecklist?: {
+    figma?: boolean;
+    development?: boolean;
+    testing?: boolean;
+    deployed?: boolean;
+  };
 }
 
 export function serializeTask(doc: any, subtaskCount = 0, completedSubtaskCount = 0): TaskSummary {
@@ -53,6 +59,12 @@ export function serializeTask(doc: any, subtaskCount = 0, completedSubtaskCount 
     acceptanceCriteria: doc.acceptanceCriteria ?? [],
     type: doc.type ?? null,
     isPersonal: doc.isPersonal ?? false,
+    featureChecklist: doc.featureChecklist ?? {
+      figma: false,
+      development: false,
+      testing: false,
+      deployed: false,
+    },
   };
 }
 
@@ -196,6 +208,12 @@ export async function createTask(user: ScopedUser, input: CreateTaskInput): Prom
     ticket: input.ticketId ? new Types.ObjectId(input.ticketId) : null,
     dueDate: input.dueDate ? new Date(input.dueDate) : null,
     isPersonal: isPersonalTask,
+    featureChecklist: input.featureChecklist ?? {
+      figma: false,
+      development: false,
+      testing: false,
+      deployed: false,
+    },
   });
 
   await writeAudit({
@@ -208,6 +226,56 @@ export async function createTask(user: ScopedUser, input: CreateTaskInput): Prom
 
   const populated = await Task.findById(task._id).populate('assignee', 'username profile').lean().exec();
   return serializeTask(populated);
+}
+
+export async function updateTask(user: ScopedUser, taskId: string, input: UpdateTaskInput): Promise<TaskSummary> {
+  const task = await Task.findById(taskId).exec();
+  if (!task) throw new Error('Task not found');
+
+  if (task.project) {
+    await assertProjectAccess(user, task.project.toString());
+  } else {
+    if (
+      user.role !== 'admin' &&
+      task.creator.toString() !== user.id &&
+      task.assignee?.toString() !== user.id
+    ) {
+      throw new Error('You do not have permission to edit this task');
+    }
+  }
+
+  if (input.title !== undefined) task.title = input.title;
+  if (input.description !== undefined) task.description = input.description;
+  if (input.priority !== undefined) task.priority = input.priority;
+  if (input.column !== undefined) task.column = input.column;
+  if (input.position !== undefined) task.position = input.position;
+  if (input.dueDate !== undefined) task.dueDate = input.dueDate ? new Date(input.dueDate) : null;
+  if (input.assigneeId !== undefined) {
+    task.assignee = input.assigneeId ? new Types.ObjectId(input.assigneeId) : null;
+  }
+  if (input.featureChecklist !== undefined) {
+    task.featureChecklist = {
+      figma: input.featureChecklist.figma ?? task.featureChecklist?.figma ?? false,
+      development: input.featureChecklist.development ?? task.featureChecklist?.development ?? false,
+      testing: input.featureChecklist.testing ?? task.featureChecklist?.testing ?? false,
+      deployed: input.featureChecklist.deployed ?? task.featureChecklist?.deployed ?? false,
+    };
+  }
+
+  await task.save();
+
+  await writeAudit({
+    userId: user.id,
+    action: 'task.updated',
+    resourceType: 'task',
+    resourceId: task._id.toHexString(),
+    details: { title: task.title },
+  });
+
+  const populated = await Task.findById(task._id).populate('assignee', 'username profile').lean().exec();
+  const subtasks = await Task.find({ parent: task._id });
+  const completedSubtasks = subtasks.filter(st => st.column === 'deployed').length;
+  return serializeTask(populated, subtasks.length, completedSubtasks);
 }
 
 export async function moveTask(user: ScopedUser, taskId: string, input: MoveTaskInput): Promise<TaskSummary> {
@@ -227,9 +295,63 @@ export async function moveTask(user: ScopedUser, taskId: string, input: MoveTask
     }
   }
 
-  task.column = input.column;
-  task.position = input.position;
-  await task.save();
+  const oldColumn = task.column;
+  const newColumn = input.column;
+  const isPersonal = task.isPersonal === true || !task.project;
+
+  const baseQuery: any = {
+    parent: null,
+    visibleOnBoard: { $ne: false },
+    isPersonal,
+  };
+  if (task.project) {
+    baseQuery.project = task.project;
+  } else {
+    baseQuery.creator = task.creator;
+  }
+
+  // Fetch all other tasks in target column ordered by current position
+  const destTasks = await Task.find({
+    ...baseQuery,
+    column: newColumn,
+    _id: { $ne: task._id },
+  })
+    .sort({ position: 1, createdAt: 1 })
+    .exec();
+
+  const insertIndex = Math.max(0, Math.min(input.position, destTasks.length));
+  destTasks.splice(insertIndex, 0, task);
+
+  const bulkOps: any[] = destTasks.map((t, idx) => ({
+    updateOne: {
+      filter: { _id: t._id },
+      update: { $set: { column: newColumn, position: idx } },
+    },
+  }));
+
+  // If moved between columns, re-index the old column as well
+  if (oldColumn !== newColumn) {
+    const srcTasks = await Task.find({
+      ...baseQuery,
+      column: oldColumn,
+      _id: { $ne: task._id },
+    })
+      .sort({ position: 1, createdAt: 1 })
+      .exec();
+
+    srcTasks.forEach((t, idx) => {
+      bulkOps.push({
+        updateOne: {
+          filter: { _id: t._id },
+          update: { $set: { position: idx } },
+        },
+      });
+    });
+  }
+
+  if (bulkOps.length > 0) {
+    await Task.bulkWrite(bulkOps);
+  }
 
   await writeAudit({
     userId: user.id,

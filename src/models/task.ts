@@ -40,6 +40,12 @@ const taskSchema = new Schema(
     riskNotes: { type: String, default: '' },
     visibleOnBoard: { type: Boolean, default: true, index: true },
     isPersonal: { type: Boolean, default: false, index: true },
+    featureChecklist: {
+      figma: { type: Boolean, default: false },
+      development: { type: Boolean, default: false },
+      testing: { type: Boolean, default: false },
+      deployed: { type: Boolean, default: false },
+    },
   },
   { timestamps: true },
 );

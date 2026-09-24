@@ -35,8 +35,44 @@ export interface ProjectProgressSummary {
   backlogTasks: number;
   percentage: number | null; // null if totalTasks is 0
   roadmap?: {
-    inProgress: Array<{ id: string; title: string; priority: string; column: string }>;
-    upcoming: Array<{ id: string; title: string; priority: string; column: string }>;
-    completed: Array<{ id: string; title: string; priority: string; column: string }>;
+    inProgress: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      priority: string;
+      column: string;
+      featureChecklist?: {
+        figma?: boolean;
+        development?: boolean;
+        testing?: boolean;
+        deployed?: boolean;
+      };
+    }>;
+    upcoming: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      priority: string;
+      column: string;
+      featureChecklist?: {
+        figma?: boolean;
+        development?: boolean;
+        testing?: boolean;
+        deployed?: boolean;
+      };
+    }>;
+    completed: Array<{
+      id: string;
+      title: string;
+      description?: string;
+      priority: string;
+      column: string;
+      featureChecklist?: {
+        figma?: boolean;
+        development?: boolean;
+        testing?: boolean;
+        deployed?: boolean;
+      };
+    }>;
   };
 }

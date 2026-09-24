@@ -23,6 +23,13 @@ const prioritySchema = z.preprocess((val) => {
   return val;
 }, z.enum(PRIORITIES));
 
+export const featureChecklistSchema = z.object({
+  figma: z.boolean().optional(),
+  development: z.boolean().optional(),
+  testing: z.boolean().optional(),
+  deployed: z.boolean().optional(),
+});
+
 export const createTaskSchema = z.object({
   projectId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid project ID').nullable().optional(),
   title: z.string().trim().min(2, 'Title must be at least 2 characters.').max(200),
@@ -34,6 +41,7 @@ export const createTaskSchema = z.object({
   ticketId: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
   isPersonal: z.boolean().optional(),
+  featureChecklist: featureChecklistSchema.optional(),
 });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
@@ -47,6 +55,7 @@ export const updateTaskSchema = z.object({
   assigneeId: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
   isPersonal: z.boolean().optional(),
+  featureChecklist: featureChecklistSchema.optional(),
 });
 
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
