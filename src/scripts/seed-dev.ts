@@ -8,7 +8,16 @@ import { Session } from '../models/session.js';
 import { User } from '../models/user.js';
 import { hashPassword } from '../services/password.js';
 import { createProject } from '../services/projects.js';
-import { deriveUsername, seedAdmin, type SeedAdminResult } from '../services/seed-admin.js';
+/** A username worth showing, derived from the address because there is no field for it. */
+export function deriveUsername(email: string): string {
+  const local = email.split('@')[0] ?? '';
+  const cleaned = local
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^[-._]+|[-._]+$/g, '')
+    .slice(0, 40);
+  return cleaned.length >= 3 ? cleaned : 'admin';
+}
 
 /**
  * The team accounts (`npm run seed:dev`).
@@ -225,9 +234,7 @@ export const TEAM_ACCOUNTS: ReadonlyArray<TeamAccount> = [
  * created. Removed on every run of this script so the directory holds the team
  * and nothing else.
  *
- * `SEED_ADMIN_EMAIL` is in this list, so point it at a real address in `.env`
- * after running this - `seedAdmin()` runs on every boot and would otherwise
- * recreate the placeholder administrator the moment the API restarts.
+ * `SEED_ADMIN_EMAIL` used to be in this list. It is kept here as a legacy reference.
  */
 export const LEGACY_SEED_EMAILS: readonly string[] = [
   'admin@claimdesk.local',
@@ -345,7 +352,6 @@ export async function removeLegacyAccounts(): Promise<RemoveLegacyResult> {
 export interface SeedDevResult {
   created: string[];
   skipped: string[];
-  admin: SeedAdminResult;
 }
 
 export async function seedDevelopmentAccounts(): Promise<SeedDevResult> {
@@ -382,14 +388,7 @@ export async function seedDevelopmentAccounts(): Promise<SeedDevResult> {
     created.push(`${account.email} (${account.role})`);
   }
 
-  // Deliberately after the loop. `seedAdmin()` creates whatever
-  // `SEED_ADMIN_EMAIL` names with the bootstrap password and
-  // `mustChangePassword`, so running it first would seize an address the team
-  // list owns (`aniket@remostarts.com`) and hand it the wrong role and the wrong
-  // password, which the loop would then skip as "already exists".
-  const admin = await seedAdmin();
-
-  return { created, skipped, admin };
+  return { created, skipped };
 }
 
 async function main(): Promise<void> {
@@ -414,7 +413,6 @@ async function main(): Promise<void> {
       sessionsRemoved: removed.sessionsRemoved,
       created: result.created,
       skipped: result.skipped,
-      adminCreated: result.admin.created,
       projectsCreated: projects.created,
       projectsSkipped: projects.skipped,
       linked: projects.linked,

@@ -2,10 +2,8 @@ import request from 'supertest';
 import { randomBytes } from 'node:crypto';
 import type { Express } from 'express';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ERROR_MESSAGES, permissionsForRole, ALL_PERMISSIONS } from '@/shared';
+import { ERROR_MESSAGES, permissionsForRole } from '@/shared';
 import { createApp } from '../src/app.js';
-import { env } from '../src/config/env.js';
-import { disconnect } from '../src/db/connect.js';
 import { logger } from '../src/logging/logger.js';
 import { AUDIT_ACTIONS, AuditLog } from '../src/models/audit-log.js';
 import { Session } from '../src/models/session.js';
@@ -22,7 +20,7 @@ import {
   TEAM_PASSWORD,
   TEAM_PROJECTS,
 } from '../src/scripts/seed-dev.js';
-import { seedAdmin } from '../src/services/seed-admin.js';
+
 import { hashSessionToken, SESSION_COOKIE_NAME } from '../src/services/session.js';
 import {
   createTestUser,
@@ -481,41 +479,11 @@ describe('secrets stay out of responses and logs', () => {
   });
 });
 
-describe('the administrator seed on boot', () => {
-  it('creates exactly one administrator that can sign in, and never touches it again', async () => {
-    const first = await seedAdmin();
-    expect(first.created).toBe(true);
-    expect(first.email).toBe(env.SEED_ADMIN_EMAIL);
-
-    const admins = await User.find({ role: 'admin' }).select('+passwordHash');
-    expect(admins).toHaveLength(1);
-    const admin = admins[0];
-    expect(admin?.email).toBe(env.SEED_ADMIN_EMAIL);
-    expect(admin?.mustChangePassword).toBe(true);
-    expect(admin?.profile?.fullName).toBe(env.SEED_ADMIN_NAME);
-    expect(await verifyPassword(env.SEED_ADMIN_PASSWORD!, admin?.passwordHash)).toBe(true);
-
-    // The configured password really is the way in.
-    const signedIn = await signInAs(app, env.SEED_ADMIN_EMAIL!, env.SEED_ADMIN_PASSWORD!);
-    expect(signedIn.body.user.role).toBe('admin');
-    expect(signedIn.body.user.mustChangePassword).toBe(true);
-    expect(signedIn.body.user.permissions).toHaveLength(ALL_PERMISSIONS.length);
-
-    // A second boot leaves the account alone, password included.
-    const digestBefore = admin?.passwordHash;
-    const second = await seedAdmin();
-    expect(second.created).toBe(false);
-    expect(second.reason).toBe('already_exists');
-    expect(await User.countDocuments({ role: 'admin' })).toBe(1);
-
-    const after = await User.findById(admin?._id).select('+passwordHash');
-    expect(after?.passwordHash).toBe(digestBefore);
-  });
+describe('the development seeds', () => {
 
   it('seeds the team accounts once and leaves an existing one alone', async () => {
     const first = await seedDevelopmentAccounts();
     expect(first.created).toHaveLength(TEAM_ACCOUNTS.length);
-    expect(first.admin.created).toBe(false); // the administrator already exists by now
 
     const developerAccount = TEAM_ACCOUNTS.find((account) => account.role === 'developer');
     const account = await User.findOne({ email: developerAccount?.email });
@@ -590,15 +558,3 @@ describe('the administrator seed on boot', () => {
   });
 });
 
-describe('the seed with no database', () => {
-  beforeAll(async () => {
-    await disconnect();
-  });
-
-  it('skips the administrator seed instead of crashing the boot', async () => {
-    const result = await seedAdmin();
-
-    expect(result.created).toBe(false);
-    expect(result.reason).toBe('database_unavailable');
-  });
-});

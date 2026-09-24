@@ -28,9 +28,9 @@ export default defineConfig({
       NODE_ENV: 'test',
       MONGODB_URI: 'mongodb://127.0.0.1:27017/claimdesk-test-placeholder',
       SESSION_SECRET: 'test-session-secret-at-least-32-characters-long',
-      SEED_ADMIN_EMAIL: 'admin@claimdesk.test',
-      SEED_ADMIN_PASSWORD: 'test-admin-password',
-      SEED_ADMIN_NAME: 'Test Administrator',
+
+
+
       LOG_LEVEL: 'silent',
     },
   },

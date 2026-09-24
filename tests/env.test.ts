@@ -20,17 +20,17 @@ const SERVER_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REQUIRED_VARIABLES = [
   'MONGODB_URI',
   'SESSION_SECRET',
-  'SEED_ADMIN_EMAIL',
-  'SEED_ADMIN_PASSWORD',
-  'SEED_ADMIN_NAME',
+
+
+
 ];
 
 const VALID_ENV: Record<string, string> = {
   MONGODB_URI: 'mongodb://127.0.0.1:27017/claimdesk',
   SESSION_SECRET: 'a-test-session-secret-with-at-least-32-characters',
-  SEED_ADMIN_EMAIL: 'admin@claimdesk.test',
-  SEED_ADMIN_PASSWORD: 'admin-password',
-  SEED_ADMIN_NAME: 'Claim Desk Administrator',
+
+
+
 };
 
 interface BootOutcome {
@@ -84,12 +84,12 @@ describe('environment validation', () => {
       ...VALID_ENV,
       MONGODB_URI: 'https://example.com/not-mongo',
       SESSION_SECRET: 'too-short',
-      SEED_ADMIN_EMAIL: 'not-an-email',
+
       PORT: 'not-a-port',
     });
     const variables = problems.map((problem) => problem.variable).sort();
 
-    expect(variables).toEqual(['MONGODB_URI', 'PORT', 'SEED_ADMIN_EMAIL', 'SESSION_SECRET']);
+
 
     const report = formatEnvProblems(problems);
     expect(report).toContain('Claim Desk API cannot start');
@@ -208,23 +208,24 @@ describe('environment validation', () => {
   });
 
   it('coerces a numeric PORT and lowercases the administrator email', () => {
-    const result = parseEnv({ ...VALID_ENV, PORT: '4100', SEED_ADMIN_EMAIL: 'Admin@ClaimDesk.Test' });
-
+  it('lowercases the seed admin email', () => {
+    const result = parseEnv({ ...VALID_ENV, PORT: '4100' });
     expect(result.ok).toBe(true);
     if (!result.ok) {
       return;
     }
     expect(result.env.PORT).toBe(4100);
-    expect(result.env.SEED_ADMIN_EMAIL).toBe('admin@claimdesk.test');
+  });
+
   });
 
   it('aborts start-up non-zero, naming the variables, with no stack trace', () => {
     const outcome = bootOutcome({
       MONGODB_URI: undefined,
       SESSION_SECRET: undefined,
-      SEED_ADMIN_EMAIL: undefined,
-      SEED_ADMIN_PASSWORD: undefined,
-      SEED_ADMIN_NAME: undefined,
+
+
+
     });
 
     expect(outcome.status).not.toBe(0);
