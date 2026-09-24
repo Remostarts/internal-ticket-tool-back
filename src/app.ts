@@ -1,6 +1,7 @@
 import express, { type Express, type Router } from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import cors from 'cors';
 import { env } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 import { createRequestLogger } from './middleware/request-logger.js';
@@ -65,6 +66,12 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.disable('x-powered-by');
   app.use(helmet());
+  app.use(
+    cors({
+      origin: ['https://internal-ticket-tool-front.vercel.app', env.WEB_ORIGIN],
+      credentials: true,
+    })
+  );
   app.use(cookieParser(env.SESSION_SECRET));
   app.use(express.json({ limit: '15mb' }));
   app.use(createRequestLogger());
