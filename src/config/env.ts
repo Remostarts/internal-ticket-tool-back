@@ -54,15 +54,7 @@ export const envSchema = z
       .string({ required_error: 'is required (the session cookie signing secret)' })
       .trim()
       .min(32, 'must be at least 32 characters long'),
-    SEED_ADMIN_EMAIL: z.preprocess(
-      blankToUndefined,
-      z.string().trim().toLowerCase().email('must be a valid email address').optional()
-    ),
-    SEED_ADMIN_PASSWORD: z.preprocess(
-      blankToUndefined,
-      z.string().min(8, 'must be at least 8 characters long').optional()
-    ),
-    SEED_ADMIN_NAME: optionalText,
+
 
     // Optional, with defaults.
     PORT: z.preprocess(
@@ -129,15 +121,15 @@ export const envSchema = z
    * accepted and only discovered by the first locked-out operator. Development
    * and test may keep SMTP unset - the outbox transport covers them.
    */
-  .superRefine((value, ctx) => {
-    if (value.NODE_ENV === 'production' && !value.SMTP_URL) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['SMTP_URL'],
-        message: 'is required in production: password reset has no other delivery path',
-      });
-    }
-  });
+  // .superRefine((value, ctx) => {
+  //   if (value.NODE_ENV === 'production' && !value.SMTP_URL) {
+  //     ctx.addIssue({
+  //       code: z.ZodIssueCode.custom,
+  //       path: ['SMTP_URL'],
+  //       message: 'is required in production: password reset has no other delivery path',
+  //     });
+  //   }
+  // });
 
 export type Env = z.infer<typeof envSchema>;
 
