@@ -26,6 +26,7 @@ import {
   addComment,
   executeBulkAction,
 } from '../services/tickets.js';
+import { convertTicketToTaskWithAi } from '../services/ai-ticket.js';
 import { sendNotification } from '../services/notify.js';
 
 export function createTicketsRouter(): Router {
@@ -123,6 +124,20 @@ export function createTicketsRouter(): Router {
       const input = assignTicketSchema.parse(req.body);
       const assigned = await assignTicket(req.sessionUser as any, req.params.id as string, input.assigneeId);
       res.status(200).json(assigned);
+    }),
+  );
+
+  // Convert Ticket to Task via AI (Staff & Admin Only)
+  router.post(
+    '/api/tickets/:id/convert-to-task',
+    requireAuth,
+    requirePermission('tasks:write'),
+    asyncHandler(async (req, res) => {
+      if (req.sessionUser?.kind === 'client' || req.sessionUser?.role === 'client') {
+        return res.status(403).json({ message: 'Only internal staff and administrators can convert tickets to engineering tasks.' });
+      }
+      const result = await convertTicketToTaskWithAi(req.sessionUser as any, req.params.id as string);
+      res.status(201).json(result);
     }),
   );
 
