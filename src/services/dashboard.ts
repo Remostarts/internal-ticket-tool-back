@@ -84,7 +84,7 @@ export async function getDashboardData(user: ScopedUser, query: DashboardQueryIn
 
   // Aggregation 2: Tasks & Overdue
   const now = new Date();
-  const taskFilter = { ...filter, parent: { $ne: null } };
+  const taskFilter = { ...filter, parent: null };
   const [taskColCounts, overdueTaskCount] = await Promise.all([
     Task.aggregate([
       { $match: taskFilter },
@@ -92,7 +92,7 @@ export async function getDashboardData(user: ScopedUser, query: DashboardQueryIn
     ]),
     Task.countDocuments({
       ...taskFilter,
-      column: { $ne: 'done' },
+      column: { $ne: 'deployed' },
       dueDate: { $lt: now },
     }).exec(),
   ]);
@@ -168,7 +168,7 @@ export async function getDashboardData(user: ScopedUser, query: DashboardQueryIn
       backlog: taskColMap['backlog'] ?? 0,
       todo: taskColMap['todo'] ?? 0,
       inProgress: taskColMap['in-progress'] ?? 0,
-      done: taskColMap['done'] ?? 0,
+      done: taskColMap['deployed'] ?? 0,
       overdue: overdueTaskCount,
     },
     operations: {

@@ -139,16 +139,6 @@ export const TEAM_ACCOUNTS: ReadonlyArray<TeamAccount> = [
     department: 'Support',
   },
   {
-    // label: client-rootremit
-    email: 'esame@rootremit.com',
-    username: 'esame',
-    role: 'client',
-    kind: 'client',
-    clientId: 'RootRemit',
-    fullName: 'Esame',
-    department: 'RootRemit',
-  },
-  {
     // label: client-vybe-bank
     email: 'gabriel@vybebank.com',
     username: 'gabriel',
@@ -269,12 +259,6 @@ export const TEAM_PROJECTS: ReadonlyArray<{ name: string; slug: string; clientNa
     slug: 'vybe-bank',
     clientName: 'Vybe Bank',
     description: 'Vybe Bank — banking platform support and delivery.',
-  },
-  {
-    name: 'RootRemit',
-    slug: 'rootremit',
-    clientName: 'RootRemit',
-    description: 'RootRemit — remittance platform support and delivery.',
   },
 ];
 
